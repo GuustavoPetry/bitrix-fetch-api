@@ -261,6 +261,11 @@ main {
   color: #6fd08c;
 }
 
+.badge-info {
+  background: #1f2f3a;
+  color: #6fb7e0;
+}
+
 .badge-warn {
   background: #3a3320;
   color: #e0c26f;

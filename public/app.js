@@ -205,6 +205,24 @@ formatBtn.addEventListener("click", () => {
 
 /* ---------- Enviar ---------- */
 
+// Cor do badge por faixa de status HTTP
+function statusClass(status) {
+  if (status >= 200 && status < 300) return "badge-ok";
+  if (status >= 300 && status < 400) return "badge-info";
+  if (status >= 400 && status < 500) return "badge-warn";
+  return "badge-err";
+}
+
+// Renderiza qualquer corpo de resposta: JSON ganha highlight, texto cru é escapado
+function renderResponse(data) {
+  if (typeof data === "string") {
+    responseEl.innerHTML = escapeHtml(data);
+    return;
+  }
+  const json = JSON.stringify(data, null, 2);
+  responseEl.innerHTML = json === undefined ? "null" : highlightJson(json);
+}
+
 async function send() {
   const method = methodInput.value.trim();
 
@@ -212,10 +230,11 @@ async function send() {
     methodInput.focus();
     return;
   }
-  if (!validateJson(false)) return;
+  // Campo vazio é válido: a requisição sai sem body (validateJson(true) aceita vazio)
+  if (!validateJson(true)) return;
 
   const text = bodyInput.value.trim();
-  const params = text ? JSON.parse(text) : {};
+  const params = text ? JSON.parse(text) : undefined;
 
   sendBtn.disabled = true;
   statusEl.classList.add("hidden");
@@ -234,21 +253,33 @@ async function send() {
     const payload = await res.json();
     const elapsed = Math.round(performance.now() - started);
 
-    statusEl.textContent = `HTTP ${payload.status}`;
-    statusEl.className = `badge ${payload.status >= 200 && payload.status < 300 ? "badge-ok" : "badge-err"}`;
+    // Exibe status e corpo SEMPRE, independente de sucesso ou erro
+    statusEl.textContent = `HTTP ${payload.status ?? res.status}`;
+    statusEl.className = `badge ${statusClass(payload.status ?? res.status)}`;
     elapsedEl.textContent = `${elapsed} ms`;
 
-    responseEl.innerHTML = highlightJson(JSON.stringify(payload.data, null, 2));
+    renderResponse(payload.data !== undefined ? payload.data : payload);
   } catch (err) {
-    statusEl.textContent = "erro";
+    statusEl.textContent = "erro de rede";
     statusEl.className = "badge badge-err";
+    elapsedEl.textContent = "";
     responseEl.textContent = String(err);
   } finally {
     sendBtn.disabled = false;
+    statusEl.classList.remove("hidden");
   }
 }
 
 sendBtn.addEventListener("click", send);
+
+// Enter no campo do método envia a requisição
+methodInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    e.stopPropagation(); // evita disparo duplo com o Ctrl+Enter global
+    send();
+  }
+});
 
 /* ---------- Copiar resposta ---------- */
 

@@ -66,15 +66,26 @@ app.post<{ Body: { method?: string; params?: unknown } }>("/call", async (req, r
   }
 
   const url = `https://${DOMAIN}/rest/${method}?auth=${AUTH_ID}`;
+  const params = req.body?.params;
 
   try {
+    // Sem params (Body vazio na UI), o POST sai sem corpo e sem Content-Type
     const response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(req.body?.params ?? {}),
+      ...(params !== undefined
+        ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(params) }
+        : {}),
     });
 
-    const data = await response.json().catch(() => null);
+    // Lê como texto e tenta parsear: garante que erros não-JSON (HTML de
+    // gateway, página de erro, etc.) também cheguem à UI para exibição
+    const raw = await response.text();
+    let data: unknown;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      data = raw;
+    }
 
     return { status: response.status, data };
   } catch (err) {

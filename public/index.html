@@ -24,20 +24,22 @@
           spellcheck="false"
           autocomplete="off"
         />
+        <button id="send" class="btn btn-send" type="button" title="Enviar (Ctrl+Enter)">▶</button>
       </div>
 
       <div class="editor-header">
         <span>Body (JSON)</span>
         <button id="format" class="btn btn-ghost" type="button">Formatar</button>
       </div>
-      <textarea
-        id="body"
-        spellcheck="false"
-        placeholder='{ "select": ["ID", "TITLE"] }'
-      ></textarea>
+      <div class="editor-wrap">
+        <pre id="body-highlight" aria-hidden="true"></pre>
+        <textarea
+          id="body"
+          spellcheck="false"
+          placeholder='{ "select": ["ID", "TITLE"] }'
+        ></textarea>
+      </div>
       <div id="json-error" class="json-error hidden"></div>
-
-      <button id="send" class="btn btn-primary" type="button">Enviar (Ctrl+Enter)</button>
     </section>
 
     <!-- Coluna de resposta -->

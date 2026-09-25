@@ -1,5 +1,6 @@
 const methodInput = document.getElementById("method");
 const bodyInput = document.getElementById("body");
+const bodyHighlight = document.getElementById("body-highlight");
 const jsonError = document.getElementById("json-error");
 const sendBtn = document.getElementById("send");
 const formatBtn = document.getElementById("format");
@@ -23,6 +24,44 @@ fetch("/context")
     contextEl.textContent = "falha ao obter contexto";
     contextEl.className = "badge badge-err";
   });
+
+/* ---------- Highlight de sintaxe JSON ---------- */
+
+const JSON_TOKEN =
+  /("(?:\\.|[^"\\])*")(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g;
+
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function highlightJson(text) {
+  return escapeHtml(text).replace(JSON_TOKEN, (match, str, colon) => {
+    if (str !== undefined) {
+      const cls = colon ? "tk-key" : "tk-string";
+      return `<span class="${cls}">${str}</span>${colon ?? ""}`;
+    }
+    if (/^(?:true|false|null)$/.test(match)) {
+      return `<span class="tk-bool">${match}</span>`;
+    }
+    return `<span class="tk-number">${match}</span>`;
+  });
+}
+
+function updateBodyHighlight() {
+  // a quebra extra no fim mantém a altura do <pre> igual à do textarea
+  bodyHighlight.innerHTML = highlightJson(bodyInput.value) + "\n";
+  syncBodyScroll();
+}
+
+function syncBodyScroll() {
+  bodyHighlight.scrollTop = bodyInput.scrollTop;
+  bodyHighlight.scrollLeft = bodyInput.scrollLeft;
+}
+
+bodyInput.addEventListener("scroll", syncBodyScroll);
 
 /* ---------- Validação de JSON ---------- */
 
@@ -48,7 +87,13 @@ function validateJson(showEmptyOk = true) {
   }
 }
 
-bodyInput.addEventListener("input", () => validateJson());
+// valida + repinta o highlight (chamado a cada edição)
+function refresh() {
+  validateJson();
+  updateBodyHighlight();
+}
+
+bodyInput.addEventListener("input", refresh);
 
 /* ---------- Facilitadores de sintaxe ---------- */
 
@@ -77,6 +122,7 @@ bodyInput.addEventListener("keydown", (e) => {
   if (e.key === "Tab") {
     e.preventDefault();
     insertAtCursor(el, "  ");
+    refresh();
     return;
   }
 
@@ -86,6 +132,7 @@ bodyInput.addEventListener("keydown", (e) => {
     el.value =
       value.slice(0, start) + e.key + PAIRS[e.key] + value.slice(end);
     el.selectionStart = el.selectionEnd = start + 1;
+    refresh();
     return;
   }
 
@@ -117,7 +164,7 @@ bodyInput.addEventListener("keydown", (e) => {
       el.selectionStart = el.selectionEnd = start + insertion.length;
     }
 
-    validateJson();
+    refresh();
     return;
   }
 });
@@ -132,12 +179,28 @@ document.addEventListener("keydown", (e) => {
 
 /* ---------- Formatar ---------- */
 
+function flashButton(btn, label) {
+  const original = btn.dataset.original ?? btn.textContent;
+  btn.dataset.original = original;
+  btn.textContent = label;
+  setTimeout(() => (btn.textContent = original), 1200);
+}
+
 formatBtn.addEventListener("click", () => {
-  if (!validateJson(false)) return;
   const text = bodyInput.value.trim();
-  if (text) {
-    bodyInput.value = JSON.stringify(JSON.parse(text), null, 2);
+
+  if (!text) {
+    flashButton(formatBtn, "Campo vazio");
+    return;
   }
+  if (!validateJson(false)) {
+    flashButton(formatBtn, "JSON inválido");
+    return;
+  }
+
+  bodyInput.value = JSON.stringify(JSON.parse(text), null, 2);
+  refresh();
+  flashButton(formatBtn, "Formatado!");
 });
 
 /* ---------- Enviar ---------- */
@@ -175,7 +238,7 @@ async function send() {
     statusEl.className = `badge ${payload.status >= 200 && payload.status < 300 ? "badge-ok" : "badge-err"}`;
     elapsedEl.textContent = `${elapsed} ms`;
 
-    responseEl.textContent = JSON.stringify(payload.data, null, 2);
+    responseEl.innerHTML = highlightJson(JSON.stringify(payload.data, null, 2));
   } catch (err) {
     statusEl.textContent = "erro";
     statusEl.className = "badge badge-err";
@@ -190,7 +253,25 @@ sendBtn.addEventListener("click", send);
 /* ---------- Copiar resposta ---------- */
 
 copyBtn.addEventListener("click", async () => {
-  await navigator.clipboard.writeText(responseEl.textContent);
-  copyBtn.textContent = "Copiado!";
-  setTimeout(() => (copyBtn.textContent = "Copiar"), 1200);
+  const text = responseEl.textContent;
+
+  try {
+    // navigator.clipboard é bloqueado em alguns iframes (ex.: Bitrix24)
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  }
+
+  flashButton(copyBtn, "Copiado!");
 });
+
+/* ---------- Estado inicial ---------- */
+
+updateBodyHighlight();

@@ -73,18 +73,18 @@ Página única em duas colunas, sem framework (JS vanilla):
 **Coluna de requisição:**
 
 - Tag fixa `POST` (regra do app: toda chamada sai como POST) + campo de texto livre para o método REST (ex.: `crm.deal.list`).
-- Textarea de Body JSON com:
+- Textarea de Body JSON com **highlight de sintaxe** (chaves, strings, números, booleanos/null coloridos — implementado com um `<pre>` colorido atrás do textarea transparente, técnica que não exige biblioteca) e:
   - **Validação em tempo real** — a cada tecla, tenta `JSON.parse`; em erro, mostra borda vermelha e a mensagem de sintaxe do parser abaixo do campo. Campo vazio é tratado como `{}`.
   - **Auto-fechamento** de `{`, `[` e `"`; digitar o fechamento sobre um caractere auto-fechado apenas pula o cursor.
   - **Indentação automática** — Enter mantém a indentação da linha atual; dentro de um par `{}`/`[]` na mesma linha, quebra o bloco indentando cursor e fechamento. `Tab` insere 2 espaços.
-  - Botão **Formatar** — reindenta o JSON com `JSON.stringify(..., null, 2)` (só executa se o JSON for válido).
-- Botão **Enviar** ou **Ctrl+Enter** (funciona dentro e fora do textarea).
+  - Botão **Formatar** — reindenta o JSON com `JSON.stringify(..., null, 2)`; dá feedback no próprio botão (`Formatado!`, `JSON inválido`, `Campo vazio`).
+- Botão **▶** pequeno ao lado do campo do método (ou **Ctrl+Enter**, que funciona dentro e fora do textarea).
 
 **Coluna de resposta:**
 
 - Badge com o `HTTP status` (verde para 2xx, vermelho caso contrário) e tempo da requisição em ms.
-- `<pre>` com a resposta formatada (indent 2), com scroll.
-- Botão **Copiar** para a área de transferência.
+- `<pre>` com a resposta formatada (indent 2) e com o mesmo highlight de sintaxe do Body, com scroll.
+- Botão **Copiar** para a área de transferência, com fallback via `execCommand("copy")` — necessário porque `navigator.clipboard` é bloqueado em iframes sem permissão de clipboard, como o do Bitrix24.
 
 **Cabeçalho:** mostra o status do contexto consultando `GET /context` — verde (`conectado: <domínio>`) quando há `AUTH_ID`, amarelo avisando para abrir dentro do Bitrix24 quando não há.
 
@@ -138,7 +138,7 @@ Servidor em `http://localhost:3333`, exposto publicamente pelo túnel.
 }
 ```
 
-4. Clique em **Enviar** (ou `Ctrl+Enter`). A resposta aparece na coluna da direita com status e tempo.
+4. Clique no botão **▶** ao lado do método (ou `Ctrl+Enter`). A resposta aparece na coluna da direita com status e tempo.
 
 ### Testando fora do Bitrix24
 

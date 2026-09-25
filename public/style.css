@@ -47,6 +47,8 @@ main {
   min-height: 0;
 }
 
+/* ---------- Linha do método + envio ---------- */
+
 .method-row {
   display: flex;
   gap: 8px;
@@ -80,6 +82,29 @@ main {
   border-color: #4f8ef7;
 }
 
+.btn-send {
+  background: #4f8ef7;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 14px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.btn-send:hover {
+  background: #3f7de6;
+}
+
+.btn-send:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---------- Cabeçalhos de seção ---------- */
+
 .editor-header {
   display: flex;
   align-items: center;
@@ -96,20 +121,54 @@ main {
   gap: 8px;
 }
 
-#body {
+/* ---------- Editor JSON com highlight (textarea sobre <pre>) ---------- */
+
+.editor-wrap {
+  position: relative;
   flex: 1;
-  resize: none;
-  background: #17181c;
-  border: 1px solid #3a3d44;
-  border-radius: 4px;
-  color: #e4e6eb;
-  padding: 10px;
+  min-height: 0;
+}
+
+#body,
+#body-highlight {
   font-family: Consolas, "Courier New", monospace;
   font-size: 13px;
   line-height: 1.5;
   tab-size: 2;
+  padding: 10px;
+  border: 1px solid #3a3d44;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: auto;
+  width: 100%;
+  height: 100%;
+}
+
+#body-highlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: #17181c;
+  color: #b9bec7;
+  border-color: transparent;
+}
+
+#body {
+  position: relative;
+  resize: none;
+  background: transparent;
+  color: transparent;
+  caret-color: #e4e6eb;
   outline: none;
-  min-height: 0;
+}
+
+#body::placeholder {
+  color: #5c6068;
+}
+
+#body::selection {
+  background: rgba(79, 142, 247, 0.35);
 }
 
 #body:focus {
@@ -119,6 +178,26 @@ main {
 #body.invalid {
   border-color: #e05252;
 }
+
+/* ---------- Cores dos tokens JSON ---------- */
+
+.tk-key {
+  color: #9cdcfe;
+}
+
+.tk-string {
+  color: #ce9178;
+}
+
+.tk-number {
+  color: #b5cea8;
+}
+
+.tk-bool {
+  color: #569cd6;
+}
+
+/* ---------- Erros / resposta ---------- */
 
 .json-error {
   background: #3a2226;
@@ -147,28 +226,14 @@ main {
   min-height: 0;
 }
 
+/* ---------- Botões e badges ---------- */
+
 .btn {
   border: none;
   border-radius: 4px;
   padding: 8px 14px;
   font-size: 13px;
   cursor: pointer;
-}
-
-.btn-primary {
-  background: #4f8ef7;
-  color: #fff;
-  font-weight: 600;
-  padding: 10px 14px;
-}
-
-.btn-primary:hover {
-  background: #3f7de6;
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 
 .btn-ghost {

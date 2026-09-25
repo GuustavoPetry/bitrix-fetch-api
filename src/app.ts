@@ -15,7 +15,7 @@ const PUBLIC_DIR = path.join(process.cwd(), "public");
 
 async function sendAppHtml(reply: import("fastify").FastifyReply) {
   const html = await readFile(path.join(PUBLIC_DIR, "index.html"), "utf-8");
-  return reply.type("text/html").send(html);
+  return reply.header("Cache-Control", "no-store").type("text/html").send(html);
 }
 
 // Rota de instalação/abertura: o Bitrix24 faz POST com AUTH_ID, DOMAIN, etc.
@@ -33,10 +33,16 @@ app.get("/", async (_req, reply) => sendAppHtml(reply));
 
 // Arquivos estáticos da UI
 app.get("/app.js", async (_req, reply) =>
-  reply.type("text/javascript").send(await readFile(path.join(PUBLIC_DIR, "app.js"), "utf-8"))
+  reply
+    .header("Cache-Control", "no-store")
+    .type("text/javascript")
+    .send(await readFile(path.join(PUBLIC_DIR, "app.js"), "utf-8"))
 );
 app.get("/style.css", async (_req, reply) =>
-  reply.type("text/css").send(await readFile(path.join(PUBLIC_DIR, "style.css"), "utf-8"))
+  reply
+    .header("Cache-Control", "no-store")
+    .type("text/css")
+    .send(await readFile(path.join(PUBLIC_DIR, "style.css"), "utf-8"))
 );
 
 // Contexto atual (para a UI exibir status)

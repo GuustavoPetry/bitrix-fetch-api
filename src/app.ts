@@ -1,49 +1,101 @@
 import fastify from "fastify";
-import fastifyFormbody from '@fastify/formbody'
+import fastifyFormbody from "@fastify/formbody";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 
-let AUTH_ID: string; // variável para salvar o token em memória
+// Contexto injetado pelo Bitrix24 na instalação/abertura do app local
+let AUTH_ID = "";
+let DOMAIN = "tiqtech.bitrix24.com.br";
 
 const app = fastify();
 
-app.register(fastifyFormbody)
+app.register(fastifyFormbody);
 
-// Rota de instalação (recebe token e salve na variável AUTH_ID)
-app.post<{Body: {AUTH_ID: string}}>("/local-app", async (req) => {
-    
-    AUTH_ID = req.body.AUTH_ID
+const PUBLIC_DIR = path.join(process.cwd(), "public");
 
-    console.log(req.body)
+async function sendAppHtml(reply: import("fastify").FastifyReply) {
+  const html = await readFile(path.join(PUBLIC_DIR, "index.html"), "utf-8");
+  return reply.header("Cache-Control", "no-store").type("text/html").send(html);
+}
 
-    return {appInfo: req.body};
+// Rota de instalação/abertura: o Bitrix24 faz POST com AUTH_ID, DOMAIN, etc.
+app.post<{ Body: { AUTH_ID?: string; DOMAIN?: string } }>("/local-app", async (req, reply) => {
+  AUTH_ID = req.body.AUTH_ID ?? AUTH_ID;
+  DOMAIN = req.body.DOMAIN ?? DOMAIN;
+
+  console.log("[bitrix] contexto recebido:", { DOMAIN, hasAuth: Boolean(AUTH_ID) });
+
+  return sendAppHtml(reply);
 });
 
-// Rota para buscar dados do usuário logado (utiliza o token recebido na instalação para realizar requisição)
-app.post("/user", async () => {
-    const response = await fetch(`https://tiqtech.bitrix24.com.br/rest/user.current?auth=${AUTH_ID}`);
+// Mesma página via GET para testes locais no navegador
+app.get("/", async (_req, reply) => sendAppHtml(reply));
 
-    const userInfo = await response.json();
+// Arquivos estáticos da UI
+app.get("/app.js", async (_req, reply) =>
+  reply
+    .header("Cache-Control", "no-store")
+    .type("text/javascript")
+    .send(await readFile(path.join(PUBLIC_DIR, "app.js"), "utf-8"))
+);
+app.get("/style.css", async (_req, reply) =>
+  reply
+    .header("Cache-Control", "no-store")
+    .type("text/css")
+    .send(await readFile(path.join(PUBLIC_DIR, "style.css"), "utf-8"))
+);
 
-    return {
-        user: userInfo.result,
+// Contexto atual (para a UI exibir status)
+app.get("/context", async () => ({
+  domain: DOMAIN,
+  authenticated: Boolean(AUTH_ID),
+}));
+
+// Proxy REST: toda chamada sai como POST para https://DOMAIN/rest/<method>?auth=AUTH_ID
+app.post<{ Body: { method?: string; params?: unknown } }>("/call", async (req, reply) => {
+  const method = (req.body?.method ?? "").trim().replace(/^\/+/, "");
+
+  if (!method) {
+    return reply.code(400).send({ status: 400, data: { error: "Informe o método REST." } });
+  }
+  if (!AUTH_ID) {
+    return reply.code(401).send({
+      status: 401,
+      data: { error: "AUTH_ID não disponível. Abra o app dentro do Bitrix24." },
+    });
+  }
+
+  const url = `https://${DOMAIN}/rest/${method}?auth=${AUTH_ID}`;
+  const params = req.body?.params;
+
+  try {
+    // Sem params (Body vazio na UI), o POST sai sem corpo e sem Content-Type
+    const response = await fetch(url, {
+      method: "POST",
+      ...(params !== undefined
+        ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(params) }
+        : {}),
+    });
+
+    // Lê como texto e tenta parsear: garante que erros não-JSON (HTML de
+    // gateway, página de erro, etc.) também cheguem à UI para exibição
+    const raw = await response.text();
+    let data: unknown;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      data = raw;
     }
+
+    return { status: response.status, data };
+  } catch (err) {
+    return reply.code(502).send({
+      status: 502,
+      data: { error: err instanceof Error ? err.message : "Falha ao chamar o Bitrix24" },
+    });
+  }
 });
 
-app.post("/list-deals", async (req) => {
-    const response = await fetch(`https://tiqtech.bitrix24.com.br/rest/crm.deal.list?auth=${AUTH_ID}`);
-
-    const deals = await response.json();
-
-    console.log(req.body)
-    console.log(deals);
-
-    return {
-        deals: deals.result,
-    };
-});
-
-app.listen({
-    host: "0.0.0.0",
-    port: 3333
-}).then(() => {
-    console.log("HTTP Server Running");
+app.listen({ host: "0.0.0.0", port: 3333 }).then(() => {
+  console.log("HTTP Server Running on http://localhost:3333");
 });

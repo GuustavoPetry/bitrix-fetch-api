@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bitrix24 REST Console</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Bitrix24 REST Console</h1>
+    <div id="context" class="badge badge-warn">carregando contexto…</div>
+  </header>
+
+  <main>
+    <!-- Coluna de requisição -->
+    <section class="pane">
+      <div class="method-row">
+        <span class="method-tag">POST</span>
+        <input
+          id="method"
+          type="text"
+          placeholder="método REST, ex.: crm.deal.list"
+          spellcheck="false"
+          autocomplete="off"
+        />
+        <button id="send" class="btn btn-send" type="button" title="Enviar (Ctrl+Enter)">▶</button>
+      </div>
+
+      <div class="editor-header">
+        <span>Body (JSON)</span>
+        <button id="format" class="btn btn-ghost" type="button">Formatar</button>
+      </div>
+      <div class="editor-wrap">
+        <pre id="body-highlight" aria-hidden="true"></pre>
+        <textarea
+          id="body"
+          spellcheck="false"
+          placeholder='{ "select": ["ID", "TITLE"] }'
+        ></textarea>
+      </div>
+      <div id="json-error" class="json-error hidden"></div>
+    </section>
+
+    <!-- Coluna de resposta -->
+    <section class="pane">
+      <div class="editor-header">
+        <span>Response</span>
+        <div class="response-actions">
+          <span id="status" class="badge hidden"></span>
+          <span id="elapsed" class="elapsed"></span>
+          <button id="copy" class="btn btn-ghost" type="button">Copiar</button>
+        </div>
+      </div>
+      <pre id="response" class="response">A resposta aparecerá aqui.</pre>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -56,6 +56,24 @@
     </section>
   </main>
 
+  <!-- Widget flutuante do Bitrix Copilot (bot de IA) -->
+  <button id="chat-toggle" class="chat-fab" type="button" title="Assistente Bitrix24" aria-label="Abrir assistente">💬</button>
+
+  <div id="chat-panel" class="chat-panel hidden">
+    <div class="chat-panel-header">
+      <span>Bitrix Copilot</span>
+      <button id="chat-close" class="btn btn-ghost" type="button" aria-label="Fechar">✕</button>
+    </div>
+    <div id="chat-messages" class="chat-messages">
+      <div class="chat-msg chat-msg-bot">Olá! Descreva o que você quer fazer no Bitrix24 (ex.: "listar os últimos 10 negócios") que eu monto o método e o payload para você.</div>
+    </div>
+    <form id="chat-form" class="chat-form">
+      <textarea id="chat-input" rows="1" placeholder="Pergunte sobre a API do Bitrix24…"></textarea>
+      <button id="chat-send" class="btn btn-send" type="submit">➤</button>
+    </form>
+  </div>
+
   <script src="/app.js"></script>
+  <script src="/chat.js"></script>
 </body>
 </html>

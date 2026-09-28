@@ -157,3 +157,44 @@ curl -X POST http://localhost:3333/local-app \
 - Toda requisição ao portal sai como `POST` com corpo JSON — inclusive métodos de listagem, que no Bitrix24 aceitam POST normalmente.
 - Tokens `AUTH_ID` do Bitrix24 expiram (tipicamente em 1 hora). Quando expirar, basta reabrir o app no portal para injetar um novo contexto (renovação via refresh token não foi implementada por ser POC).
 - Como o token fica em memória no servidor, qualquer pessoa com acesso à URL usa a sessão de quem abriu o app por último. Não exponha em ambiente compartilhado.
+
+---
+
+## Atualizações: sessão por usuário (Redis), bot de IA e widget de chat
+
+### O que mudou
+
+- **Sessão por usuário via Redis**: a antiga variável global única (`AUTH_ID`/`DOMAIN` em memória) foi substituída por um cookie de sessão assinado (`bx_session`) + uma chave no Redis por sessão, com TTL de 1h (`SESSION_TTL_SECONDS`). Isso resolve a limitação de multiusuário documentada anteriormente: cada pessoa que abrir o app agora tem seu próprio `AUTH_ID` guardado, e a sessão sobrevive a um restart do servidor.
+- **Bot de IA ("Bitrix Copilot")**: um widget de chat flutuante (ícone 💬 no canto inferior direito) conversa com um agente rodando na Kimi API (endpoint compatível com o SDK da OpenAI, com tool/function calling). O bot só responde perguntas sobre montar/executar métodos da REST API do Bitrix24; qualquer outro assunto recebe uma recusa breve e educada.
+- **Fluxo do bot**: o usuário descreve o que quer fazer → o bot decide o método REST e monta o payload → a rota `POST /api/chat` devolve `{ method, params, requiresConfirmation }` → o frontend preenche automaticamente os campos de Método e Body da UI principal e:
+  - se for um método de leitura (`*.list`, `*.get`, `*.fields`, `*.current`, `*.count`, `*.ping`), a chamada é disparada automaticamente via `/call`;
+  - se for um método de escrita/exclusão (add/update/delete/etc.), o chat mostra um card de confirmação — a execução só acontece quando o usuário clica em "Executar agora" (ou no botão ▶ da UI principal).
+
+  Em todos os casos, a execução real do método continua acontecendo **exclusivamente** pela rota `/call` já existente — o bot nunca chama o Bitrix24 diretamente.
+
+- **MCP do Bitrix24 (pendente)**: o projeto já tem um ponto de extensão (`src/services/bitrixMcp.ts`) reservado para consultar um servidor MCP do Bitrix24 como fonte adicional de documentação/descoberta de métodos. Ainda não está configurado — falta definir qual servidor MCP usar e suas credenciais. Enquanto isso, o bot usa um catálogo estático de métodos comuns (`src/services/bitrixKnowledge.ts`) como referência.
+
+### Novas variáveis de ambiente (`.env`)
+
+Veja `.env.example` para a lista completa. Resumo:
+
+| Variável | Para que serve |
+|---|---|
+| `REDIS_URL` | Conexão com o Redis (padrão: `redis://127.0.0.1:6379`) |
+| `SESSION_COOKIE_NAME`, `SESSION_TTL_SECONDS`, `SESSION_SECRET` | Cookie de sessão por usuário |
+| `OPENAI_API_KEY`, `OPENAI_URL`, `OPENAI_MODEL` | Credenciais/endpoint da Kimi API |
+| `BITRIX_MCP_URL`, `BITRIX_MCP_TOKEN` | Servidor MCP do Bitrix24 (opcional, ainda não configurado) |
+
+### Subindo um Redis local para desenvolvimento
+
+```bash
+docker compose up -d
+```
+
+(sobe um Redis 7 na porta 6379; ajuste `REDIS_URL` se já tiver uma instância própria).
+
+### Limitações conhecidas desta etapa
+
+- O cookie de sessão usa `SameSite=None; Secure`, necessário por rodar dentro do iframe do Bitrix24 — exige HTTPS (já garantido pelo túnel) e pode ser bloqueado por navegadores com política estrita de cookies de terceiros (ex.: Safari ITP). Se isso ocorrer na prática, será necessário um mecanismo alternativo de identificação de sessão.
+- O histórico da conversa do chat vive apenas no navegador (não é persistido no servidor) — ao recarregar a página, o histórico é perdido.
+- A integração com o servidor MCP do Bitrix24 ainda não foi implementada de fato (ver `src/services/bitrixMcp.ts`).

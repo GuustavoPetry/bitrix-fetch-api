@@ -306,3 +306,19 @@ copyBtn.addEventListener("click", async () => {
 /* ---------- Estado inicial ---------- */
 
 updateBodyHighlight();
+
+/* ---------- Integração com o widget de chat (Bitrix Copilot) ---------- */
+
+// Preenche o método + body a partir de uma sugestão do bot de IA, reaproveitando
+// o mesmo highlight/validação já usados na digitação manual.
+function setRequest(method, params) {
+  methodInput.value = method || "";
+  bodyInput.value =
+    params !== undefined && params !== null ? JSON.stringify(params, null, 2) : "";
+  refresh();
+}
+
+// Exposto para public/chat.js: garante que QUALQUER execução real (seja pelo
+// clique manual do usuário, seja pelo bot de IA) passe sempre pela mesma
+// função send(), que por sua vez chama a rota /call já existente.
+window.bitrixConsole = { setRequest, send };
